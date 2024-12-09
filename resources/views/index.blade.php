@@ -159,10 +159,11 @@
                         <h2>${item.title}</h2>
                         <p>${item.description}</p>
                         <img src="/storage/${item.foto}" alt="${item.title}">
-                        <video controls>
+                        <video controls width="100%" height="auto">
                             <source src="/storage/${item.video}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
+
                     `;
                     resultsDiv.appendChild(itemDiv);
                 });
