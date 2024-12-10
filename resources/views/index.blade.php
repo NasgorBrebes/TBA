@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,6 +30,7 @@
             width: 100%;
             max-width: 600px;
             gap: 5px;
+            position: relative;
         }
 
         #keyword {
@@ -57,6 +59,29 @@
 
         button[type="submit"]:hover {
             background-color: #357ae8;
+        }
+
+        #suggestions {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
         }
 
         .results {
@@ -94,14 +119,14 @@
             margin: 0 0 10px;
         }
 
-        .result-item img, .result-item video {
+        .result-item img,
+        .result-item video {
             margin-top: 10px;
             width: 100%;
             max-width: 100%;
             border-radius: 8px;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 600px) {
             h1 {
                 font-size: 1.5rem;
@@ -119,61 +144,150 @@
         }
     </style>
 </head>
+
 <body>
     <h1>SARASWATI</h1>
     <form id="searchForm">
         <input type="text" id="keyword" placeholder="Enter a keyword" required>
         <button type="submit">Search</button>
+        <div id="suggestions"></div>
     </form>
     <div class="results" id="results"></div>
 
     <script>
-        document.getElementById('searchForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+        const searchForm = document.getElementById('searchForm');
+        const keywordInput = document.getElementById('keyword');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const resultsDiv = document.getElementById('results');
+        let debounceTimeout;
 
-            const keyword = document.getElementById('keyword').value;
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-            fetch('/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({ keyword: keyword })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('No matching results found.');
-                }
-                return response.json();
-            })
-            .then(data => {
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '';
+        // Fungsi untuk membuat item saran
+        const createSuggestionItem = (text) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('suggestion-item');
+            itemDiv.textContent = text;
+            itemDiv.onclick = () => {
+                keywordInput.value = text;
+                suggestionsDiv.innerHTML = ''; // Clear suggestions
+                fetchSentences(text); // Ambil hasil pencarian saat saran diklik
+                suggestionsDiv.style.display = 'none'; // Sembunyikan saran setelah klik
+            };
+            return itemDiv;
+        };
 
-                data.forEach(item => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.classList.add('result-item');
-                    itemDiv.innerHTML = `
-                        <h2>${item.title}</h2>
-                        <p>${item.description}</p>
-                        <img src="/storage/${item.foto}" alt="${item.title}">
-                        <video controls width="100%" height="auto">
-                            <source src="/storage/${item.video}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
+        // Fungsi untuk membuat item hasil pencarian
+        const createResultItem = (item) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('result-item');
+            itemDiv.innerHTML = `
+                <h2>${item.title}</h2>
+                <p>${item.description}</p>
+                <img src="/storage/${item.foto}" alt="${item.title}" width="200" height="200">
+                <video controls width="200" height="200">
+                    <source src="/storage/${item.video}" type="video/mp4">
+                    Browser Anda tidak mendukung video.
+                </video>
+            `;
+            return itemDiv;
+        };
 
-                    `;
-                    resultsDiv.appendChild(itemDiv);
+        // Fungsi untuk mengambil saran
+        const fetchSuggestions = (keyword) => {
+            fetch('/suggestions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        keyword
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    suggestionsDiv.innerHTML = ''; // Clear previous suggestions
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            suggestionsDiv.appendChild(createSuggestionItem(item.title));
+                        });
+                        suggestionsDiv.style.display = 'block'; // Menampilkan saran
+                    } else {
+                        suggestionsDiv.style.display = 'none'; // Menyembunyikan saran jika tidak ada
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    suggestionsDiv.innerHTML = '<p>Error fetching suggestions.</p>';
+                    suggestionsDiv.style.display = 'none'; // Hide on error
                 });
-            })
-            .catch(error => {
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = `<p>${error.message}</p>`;
-                console.error('Error:', error);
-            });
+        };
+
+        // Fungsi untuk mengambil hasil pencarian
+        const fetchSentences = (keyword) => {
+            fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        keyword
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resultsDiv.innerHTML = ''; // Clear previous results
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            resultsDiv.appendChild(createResultItem(item));
+                        });
+                    } else {
+                        resultsDiv.innerHTML = '<p>Tidak ada hasil yang ditemukan.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsDiv.innerHTML = '<p>Error fetching results.</p>';
+                });
+        };
+
+        // Event listener untuk input keyword dengan debounce
+        keywordInput.addEventListener('input', function(event) {
+            const keyword = keywordInput.value.trim();
+
+            // Jika yang ditekan adalah tombol Enter, jangan lakukan pencarian saran
+            if (event.key === 'Enter') {
+                return;
+            }
+
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                if (keyword) {
+                    fetchSuggestions(keyword); // Ambil saran saat input lebih dari 2 karakter
+                } else {
+                    suggestionsDiv.innerHTML = ''; // Clear suggestions
+                    suggestionsDiv.style.display = 'none'; // Hide suggestions if input is too short
+                }
+            }, 300); // Debounce time of 300ms
+        });
+
+        // Event listener untuk submit form pencarian
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Menghentikan submit form
+
+            const keyword = keywordInput.value.trim();
+            if (keyword) {
+                resultsDiv.innerHTML = ''; // Clear previous results
+                fetchSentences(keyword); // Ambil hasil pencarian langsung setelah submit
+            }
+
+            // Clear suggestions saat form disubmit
+            suggestionsDiv.innerHTML = ''; // Clear suggestions after submit
+            suggestionsDiv.style.display = 'none'; // Hide suggestions after form submit
         });
     </script>
 </body>
+
 </html>

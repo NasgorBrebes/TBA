@@ -19,4 +19,5 @@ Route::get('/', function () {
     return view('index'); // Halaman utama (index)
 });
 
-Route::post('/search', [SearchController::class, 'search'])->name('search');
+Route::post('/search', [SearchController::class, 'search']);
+Route::post('/suggestions', [SearchController::class, 'suggestions']);
