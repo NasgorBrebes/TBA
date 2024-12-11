@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Search Page</title>
     <style>
+        /* Styling tetap sama seperti sebelumnya */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -102,29 +103,11 @@
             box-sizing: border-box;
         }
 
-        .result-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
-
         .result-item h2 {
             font-size: 1.2rem;
             color: #4285f4;
             margin: 0 0 10px;
-        }
-
-        .result-item p {
-            font-size: 1rem;
-            color: #555;
-            margin: 0 0 10px;
-        }
-
-        .result-item img,
-        .result-item video {
-            margin-top: 10px;
-            width: 100%;
-            max-width: 100%;
-            border-radius: 8px;
+            cursor: pointer;
         }
 
         @media (max-width: 600px) {
@@ -181,15 +164,22 @@
         const createResultItem = (item) => {
             const itemDiv = document.createElement('div');
             itemDiv.classList.add('result-item');
+
+            // Menampilkan judul dengan tautan ke halaman detail
             itemDiv.innerHTML = `
                 <h2>${item.title}</h2>
+            `;
+
+            const elemen = itemDiv.addEventListener('click', (e) => {
+                itemDiv.innerHTML =
+                    `<h2>${item.title}</h2>
                 <p>${item.description}</p>
                 <img src="/storage/${item.foto}" alt="${item.title}" width="200" height="200">
                 <video controls width="200" height="200">
-                    <source src="/storage/${item.video}" type="video/mp4">
-                    Browser Anda tidak mendukung video.
-                </video>
-            `;
+                <source src="/storage/${item.video}" type="video/mp4">
+                Browser Anda tidak mendukung video.
+                </video>`;
+            })
             return itemDiv;
         };
 
@@ -256,11 +246,6 @@
         // Event listener untuk input keyword dengan debounce
         keywordInput.addEventListener('input', function(event) {
             const keyword = keywordInput.value.trim();
-
-            // Jika yang ditekan adalah tombol Enter, jangan lakukan pencarian saran
-            if (event.key === 'Enter') {
-                return;
-            }
 
             clearTimeout(debounceTimeout);
             debounceTimeout = setTimeout(() => {

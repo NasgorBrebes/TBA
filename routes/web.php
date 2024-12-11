@@ -21,3 +21,4 @@ Route::get('/', function () {
 
 Route::post('/search', [SearchController::class, 'search']);
 Route::post('/suggestions', [SearchController::class, 'suggestions']);
+
